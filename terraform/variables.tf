@@ -1,0 +1,4 @@
+variable "key" {
+}
+variable "ami" {
+}
