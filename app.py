@@ -3,9 +3,9 @@ from flask_mysqldb import MySQL
 
 app = Flask(__name__, static_url_path='/static')
 # MySQL Configuration
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'jmais'
+app.config['MYSQL_HOST'] = 'bookstore-db.cno3ddrupypu.eu-north-1.rds.amazonaws.com'
+app.config['MYSQL_USER'] = 'admin'
+app.config['MYSQL_PASSWORD'] = 'admin123'
 app.config['MYSQL_DB'] = 'bookstore_db'
 mysql = MySQL(app)
 
