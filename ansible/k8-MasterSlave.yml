@@ -1,0 +1,59 @@
+---
+- name: Install kubedm
+  become: True
+  hosts: all
+
+  tasks:
+    - name: update cache
+      apt:
+        update_cache: yes
+    - name : Install docker
+      apt:
+        name: docker
+        state: present
+        update_cache: yes
+    - name: change permissions of docker sock
+      ansible.builtin.file:
+        path: /var/run/docker.sock
+        mode: 666
+    - name: Install apt-transport-https, ca-certificates, curl, gnupg
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Create /etc/apt/keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+  
+    - name: Download Kubernetes GPG key and save it
+      ansible.builtin.command:
+        cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+        filename: "kubernetes.list"
+        state: present
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Install kubeadm, kubelet, kubectl
+      ansible.builtin.apt:
+        name:
+          - kubeadm=1.28.1-1.1
+          - kubelet=1.28.1-1.1
+          - kubectl=1.28.1-1.1
+        state: present
+        update_cache: yes

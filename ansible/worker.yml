@@ -1,0 +1,17 @@
+---
+- name: worker node configurations
+  hosts: worker
+  become: yes
+  tasks:
+    - name: Copy kubeadm join command from master
+      fetch:
+        src: /tmp/kubeadm_join_cmd.txt
+        dest: /tmp/kubeadm_join_cmd.txt
+        flat: yes
+
+    - name: Read join command
+      command: cat /tmp/kubeadm_join_cmd.txt
+      register: join_command
+    
+    - name: Join the Kubernetes cluster
+      command: "{{ join_command.stdout }}"

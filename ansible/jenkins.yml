@@ -1,0 +1,110 @@
+---
+- name: jenkins and sonarkube configuration
+  hosts: jenkins
+  become: yes
+  tasks:
+    - name: install openjdk
+      apt:
+        name: openjdk-17-jre-headless
+        state: present
+        update_cache: yes
+    - name: download jenkins GPG key
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+    
+    - name: Add Jenkins repository to sources list
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/jenkins.list
+        line: 'deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/'
+        create: yes
+    - name: Update APT package list
+      apt:
+        update_cache: yes
+    
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+    
+    - name: Update package manager repositories
+      apt:
+        update_cache: yes
+    - name: Install necessary dependencies
+      apt:
+        name: 
+          - ca-certificates
+          - curl
+        state: present
+    - name: Create directory for Docker GPG key
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+    
+    - name: Download Docker's GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+    
+    - name: Ensure proper permissions for the Docker GPG key
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+    
+    - name: Add Docker repository to Apt sources
+      apt_repository:
+        repo: "deb [arch={{ ansible_architecture }} signedby=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+    - name: Update package manager repositories after adding Docker repository
+      apt:
+        update_cache: yes
+    - name: Install Docker packages
+      apt:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+    - name: Install Docker plugins (optional, adjust as needed)
+      apt:
+        name: 
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: change permissions of /var/run/docker.sock
+      ansible.builtin.file:
+        path: /var/run/docker.sock
+        mode: 666
+
+    - name: Run SonarQube container
+      docker_container:
+        name: sonar
+        image: sonarqube:lts-community
+        state: started
+        ports:
+          - "9000:9000"
+
+    - name: Download Kubernetes GPG key and save it
+      ansible.builtin.command:
+        cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+        filename: "kubernetes.list"
+        state: present
+    - name: Update apt cache
+      ansible.builtin.apt:
+          update_cache: yes
+    - name: Install kubeadm, kubelet, kubectl
+      ansible.builtin.apt:
+        name: kubectl=1.28.1-1.1
+        state: present
+        update_cache: yes
+
+
+    
