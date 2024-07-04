@@ -1,0 +1,29 @@
+---
+- name: Add Docker repository to Ubuntu
+  hosts: jenkins
+  become: yes
+  tasks:
+    - name: Ensure required directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Fetch Docker's official GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+        keyring: /etc/apt/keyrings/docker.asc
+
+    - name: Add Docker repository
+      ansible.builtin.command: >
+        echo "deb [arch=$(dpkg --print-architecture) signedby=/etc/apt/keyrings/docker.asc]
+        https://download.docker.com/linux/ubuntu
+        $(. /etc/os-release && echo $VERSION_CODENAME) stable" |
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Update apt package index
+      ansible.builtin.apt:
+        update_cache: yes
