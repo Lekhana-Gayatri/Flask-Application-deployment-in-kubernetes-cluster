@@ -1,11 +1,20 @@
 FROM python:3.8-slim-buster
 
-COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
+WORKDIR /app
+COPY requirements.txt .
 
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv libmysqlclient-dev build-essential pkg-config && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the project files into the image
 COPY app.py /app
 COPY templates /app
 COPY static /app
-WORKDIR /app
-EXPOSE 5000
-CMD [ "python3", "app.py"]
+CMD ["python", "app.py"]
