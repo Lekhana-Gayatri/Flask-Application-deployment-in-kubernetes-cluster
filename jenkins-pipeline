@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+    
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+    
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/Lekhana-Gayatri/NIELIT-PROJECT.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                  sh '''
+                      $SCANNER_HOME/bin/sonar-scanner \
+                      -Dsonar.projectName=FlaskApp \
+                      -Dsonar.projectKey=FlaskApp \
+                      -Dsonar.sources=. \
+                      -Dsonar.language=py \
+                      -Dsonar.python.version=3.8 \
+                      -Dsonar.exclusions=**/tests/**
+                  '''
+                }
+            }
+        }
+
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+                }
+            }
+        }
+        stage('Build & Tag Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        sh "docker build -t lekhana2004/bookstore-app:latest ."
+                    }
+                }
+            }
+        }
+
+        stage('Docker Image Scan') {
+            steps {
+                sh "trivy image --format table -o trivy-image-report.html adijaiswal/boardshack:latest"
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        sh "docker push lekhana2004/bookstore-app:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy To Kubernetes') {
+            steps {
+                withKubeConfig(caCertificate: '', clusterName: 'kubernetes', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.47.143:6443') {
+                    sh "kubectl apply -f deployment-service.yaml"
+                }
+            }
+        }
+
+        stage('Verify the Deployment') {
+            steps {
+                withKubeConfig(caCertificate: '', clusterName: 'kubernetes', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.47.143:6443') {
+                    sh "kubectl get pods -n webapps"
+                    sh "kubectl get svc -n webapps"
+                }
+            }
+        }
+    }
+}
