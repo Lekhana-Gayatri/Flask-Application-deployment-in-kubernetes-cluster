@@ -1,48 +1,3 @@
-# ---
-# - name: master node configurations
-#   hosts: master
-#   become: yes
-#   tasks:
-#     - name: Ensure necessary directories exist
-#       file:
-#         path: /etc/apt/keyrings
-#         state: directory
-#         mode: '0755'
-#     - name: Initialize the Kubernetes cluster
-#       ansible.builtin.command:
-#         cmd: kubeadm init --pod-network-cidr=10.244.0.0/16
-#       register: kubeadm_output
-  
-#     - name: Create .kube directory
-#       file:
-#         path: "{{ ansible_env.HOME }}/.kube"
-#         state: directory
-#         mode: '0755'
-#         owner: "{{ ansible_user }}"
-#         group: "{{ ansible_user }}"
-      
-#     - name: Copy admin.conf to user's kube config
-#       copy:
-#         src: /etc/kubernetes/admin.conf
-#         dest: "{{ ansible_env.HOME }}/.kube/config"
-#         remote_src: yes
-#         owner: "{{ ansible_user }}"
-#         group: "{{ ansible_user }}"
-#         mode: '0644'
-#     - name: Change ownership of the kube config
-#       file:
-#         path: "{{ ansible_env.HOME }}/.kube/config"
-#         owner: "{{ ansible_user }}"
-#         group: "{{ ansible_user }}"
-#         mode: '0644'
-#     - name: Deploy Networking Solution(calico)
-#       ansible.builtin.command:
-#         cmd: kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
-    
-#     - name: Deploy ingress controller (nginx)
-#       ansible.builtin.command:
-#         cmd: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingressnginx/controller-v0.49.0/deploy/static/provider/baremetal/deploy.yaml
-
 ---
 - name: master node configurations
   hosts: master
@@ -57,7 +12,25 @@
       ansible.builtin.command:
         cmd: kubeadm init --pod-network-cidr=10.244.0.0/16
       register: kubeadm_output
-      
+
+    - name: Debug kubeadm output
+      debug:
+        var: kubeadm_output.stdout
+
+    - name: Save join command to file on Ansible control node
+      local_action:
+        module: copy
+        content: "{{ kubeadm_output.stdout_lines | kubeadm_output.stdout | regex_replace('\n', ' ') | regex_search('kubeadm join .*')  }}"
+        dest: "./join_command.sh"
+    - name: make join script executable
+      local_action:
+        module: command
+        cmd: chmod +x ./join_command.sh
+
+    - name: Save kubeadm join command to a file
+      copy:
+        content: "{{ kubeadm_output.stdout_lines | select('search', 'kubeadm join') | list | join(' ') }}"
+        dest: /tmp/kubeadm_join_cmd.txt
     - name: Create .kube directory
       file:
         path: "/home/ubuntu/.kube"
