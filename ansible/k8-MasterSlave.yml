@@ -1,7 +1,7 @@
 ---
 - name: Install kubedm
-  become: True
-  hosts: all
+  become: yes
+  hosts: master,slaves
 
   tasks:
     - name: update cache
@@ -9,7 +9,7 @@
         update_cache: yes
     - name : Install docker
       apt:
-        name: docker
+        name: docker.io
         state: present
         update_cache: yes
     - name: change permissions of docker sock
@@ -33,10 +33,13 @@
         mode: '0755'
         owner: root
         group: root
-  
-    - name: Download Kubernetes GPG key and save it
-      ansible.builtin.command:
-        cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    - name: Download Kubernetes GPG key
+      ansible.builtin.shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key -o /tmp/kubernetes-apt-keyring.gpg
+      args:
+        creates: /tmp/kubernetes-apt-keyring.gpg
+
+    - name: Convert Kubernetes GPG key to .gpg format
+      ansible.builtin.shell: gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/kubernetes-apt-keyring.gpg
       args:
         creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
