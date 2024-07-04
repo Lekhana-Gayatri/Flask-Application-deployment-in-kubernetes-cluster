@@ -7,16 +7,15 @@ terraform_data = json.loads(terraform_output)
 
 # Extract the IPs
 webserver_ips = terraform_data['webserver_ips']['value']
-db_server_ip = terraform_data['db_ip']['value']
 monitor = terraform_data['monitor']['value']
 jenkins = terraform_data['jenkins']['value']
+master = terraform_data['master']['value']
 
-inventory_content = "[webservers]\n"
+inventory_content = "[slaves]\n"
 inventory_content += "\n".join(webserver_ips)
-inventory_content += "\n\n[db]\n"
-inventory_content += db_server_ip + "\n\n"
-inventory_content+="[jenkins]"+"\n"+jenkins
+inventory_content+="\n\n[jenkins]"+"\n"+jenkins
 inventory_content+="\n\n"+"[monitor]"+"\n"+monitor
+inventory_content+="\n\n"+"[master]"+"\n"+master
 
 
 with open('../ansible/inventory.ini', 'w') as inventory_file:
