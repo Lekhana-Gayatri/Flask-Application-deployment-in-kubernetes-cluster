@@ -1,17 +1,27 @@
 ---
-- name: worker node configurations
-  hosts: worker
+- name: Worker node configurations
+  hosts: slaves
   become: yes
   tasks:
-    - name: Copy kubeadm join command from master
-      fetch:
-        src: /tmp/kubeadm_join_cmd.txt
-        dest: /tmp/kubeadm_join_cmd.txt
-        flat: yes
+    - name: Read join command script from file on Ansible control node
+      delegate_to: localhost
+      slurp:
+        src: "./join_command.sh"
+      register: join_command_file
 
-    - name: Read join command
-      command: cat /tmp/kubeadm_join_cmd.txt
-      register: join_command
-    
+    - name: Decode join command
+      set_fact:
+        join_command: "{{ join_command_file.content | b64decode | regex_replace('\\\\', '') }}"
+
+    - name: Save join command script on worker
+      copy:
+        content: |
+          #!/bin/bash
+          {{ join_command }}
+        dest: /tmp/join_command.sh
+        mode: '0755'
+
     - name: Join the Kubernetes cluster
-      command: "{{ join_command.stdout }}"
+      command: /tmp/join_command.sh
+      args:
+        creates: /etc/kubernetes/kubelet.conf
