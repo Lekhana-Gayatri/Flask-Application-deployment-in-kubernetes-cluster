@@ -7,3 +7,7 @@ output "jenkins" {
 output "monitor" {
   value = aws_instance.monitor.public_ip
 }
+
+output "master" {
+  value = aws_instance.master.public_ip
+}
