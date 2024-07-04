@@ -17,20 +17,6 @@
       debug:
         var: kubeadm_output.stdout
 
-    - name: Save join command to file on Ansible control node
-      local_action:
-        module: copy
-        content: "{{ kubeadm_output.stdout_lines | kubeadm_output.stdout | regex_replace('\n', ' ') | regex_search('kubeadm join .*')  }}"
-        dest: "./join_command.sh"
-    - name: make join script executable
-      local_action:
-        module: command
-        cmd: chmod +x ./join_command.sh
-
-    - name: Save kubeadm join command to a file
-      copy:
-        content: "{{ kubeadm_output.stdout_lines | select('search', 'kubeadm join') | list | join(' ') }}"
-        dest: /tmp/kubeadm_join_cmd.txt
     - name: Create .kube directory
       file:
         path: "/home/ubuntu/.kube"
