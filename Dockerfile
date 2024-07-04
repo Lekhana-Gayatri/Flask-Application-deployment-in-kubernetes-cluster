@@ -4,7 +4,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv libmysqlclient-dev build-essential pkg-config && \
+    apt-get install -y python3 python3-pip python3-venv pkg-config default-libmysqlclient-dev build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
