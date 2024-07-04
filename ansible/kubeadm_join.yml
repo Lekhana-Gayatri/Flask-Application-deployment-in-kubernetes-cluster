@@ -1,0 +1,24 @@
+---
+- name: Generate Kubernetes join command
+  hosts: master
+  become: yes
+  tasks:
+    - name: Create new token and get join command
+      command: kubeadm token create --print-join-command
+      register: join_command_raw
+
+    - name: Debug join command output
+      debug:
+        var: join_command_raw.stdout
+
+    - name: Save join command to a file
+      local_action:
+        module: copy
+        content: "{{ join_command_raw.stdout }}"
+        dest: "./join_command.sh"
+      changed_when: false  # To ensure this task doesn't always appear as changed
+
+    - name: Change permissions of the join_command.sh file
+      local_action:
+        module: ansible.builtin.command
+        cmd: chmod +x ./join_command.sh
